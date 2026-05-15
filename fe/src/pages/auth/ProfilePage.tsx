@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { useAuthStore } from '@/stores/authStore';
 import { authService } from '@/services/authService';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { passwordSchema as sharedPasswordSchema, PASSWORD_RULES } from '@/lib/validation/password-rules';
 
 const profileSchema = z.object({
   full_name: z.string().min(2, 'Tối thiểu 2 ký tự'),
@@ -15,17 +16,17 @@ const profileSchema = z.object({
   language: z.string().optional(),
 });
 
-const passwordSchema = z.object({
+const passwordChangeSchema = z.object({
   current_password: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại'),
-  new_password: z.string().min(8, 'Tối thiểu 8 ký tự'),
+  new_password: sharedPasswordSchema,
   confirm_password: z.string(),
 }).refine((d) => d.new_password === d.confirm_password, {
-  message: 'Xác nhận mật khẩu không khớp',
+  message: PASSWORD_RULES.messages.confirmMismatch,
   path: ['confirm_password'],
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
-type PasswordForm = z.infer<typeof passwordSchema>;
+type PasswordForm = z.infer<typeof passwordChangeSchema>;
 
 export default function ProfilePage() {
   const { user, updateProfile: updateStore } = useAuthStore();
@@ -46,7 +47,7 @@ export default function ProfilePage() {
 
   // Password form
   const passwordForm = useForm<PasswordForm>({
-    resolver: zodResolver(passwordSchema),
+    resolver: zodResolver(passwordChangeSchema),
   });
 
   const handleProfileSubmit = async (data: ProfileForm) => {

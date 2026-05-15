@@ -40,31 +40,94 @@ export function requestSanitizer(req: Request, res: Response, next: NextFunction
 }
 
 /**
- * SQL Injection detection middleware
+ * SQL Injection detection and blocking middleware.
+ *
+ * Uses a two-tier approach:
+ * - HIGH confidence patterns: Block the request immediately (return 403)
+ * - LOW confidence patterns: Flag and log but allow through (may be false positive)
+ *
+ * High-confidence patterns are combinations that are almost never legitimate user input.
  */
 export function sqlInjectionDetector(req: Request, res: Response, next: NextFunction) {
-  const suspiciousPatterns = [
-    /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/i,
-    /(--|;|\/\*|\*\/|xp_|sp_)/i,
-    /('|"|`)\s*(OR|AND)\s*('|"|`)/i,
-    /(\b1\s*=\s*1\b|\b0\s*=\s*0\b)/i,
+  // HIGH CONFIDENCE: These patterns are almost certainly SQL injection attacks.
+  // They combine multiple SQL indicators that legitimate users would never type.
+  const highConfidencePatterns = [
+    // Classic tautology injections: ' OR 1=1 --, " OR ""="
+    /('|"|`)\s*(OR|AND)\s+\d+\s*=\s*\d+/i,
+    // Tautology: ' OR 'a'='a, " OR "x"="x
+    /('|"|`)\s*(OR|AND)\s*('|"|`)\w*('|"|`)\s*=\s*('|"|`)/i,
+    // UNION SELECT - extracting data from other tables
+    /UNION\s+(ALL\s+)?SELECT\s+/i,
+    // Stacked queries with dangerous commands: ; DROP TABLE, ; DELETE FROM
+    /;\s*(DROP|DELETE|TRUNCATE|ALTER|CREATE|INSERT|UPDATE)\s+/i,
+    // EXEC/EXECUTE with xp_ or sp_ (SQL Server stored procedures)
+    /(EXEC|EXECUTE)\s+(xp_|sp_)/i,
+    // WAITFOR DELAY / BENCHMARK (time-based blind SQLi)
+    /WAITFOR\s+DELAY\s+'/i,
+    /BENCHMARK\s*\(\s*\d+/i,
+    // LOAD_FILE, INTO OUTFILE/DUMPFILE (file access)
+    /(LOAD_FILE|INTO\s+(OUT|DUMP)FILE)/i,
+    // Comment-based bypass after injection: '--  or /* */
+    /('|"|`)\s*;\s*--/i,
+    // Information schema probing
+    /INFORMATION_SCHEMA\.(TABLES|COLUMNS|SCHEMATA)/i,
+    // Hex-encoded attacks
+    /0x[0-9a-f]{8,}/i,
+    // CHAR() function used to bypass filters
+    /CHAR\s*\(\s*\d+(\s*,\s*\d+){3,}\s*\)/i,
   ];
 
-  const body = JSON.stringify(req.body);
-  const query = JSON.stringify(req.query);
-  const combined = body + query;
+  // LOW CONFIDENCE: These may appear in legitimate input but are worth flagging.
+  const lowConfidencePatterns = [
+    // Single SQL keywords (could appear in legitimate text, e.g., "SELECT a plan")
+    /(\b(DROP|ALTER|TRUNCATE)\s+(TABLE|DATABASE|INDEX)\b)/i,
+    // Simple tautology without quotes
+    /(\b1\s*=\s*1\b|\b0\s*=\s*0\b)/i,
+    // xp_ or sp_ prefixes
+    /\b(xp_|sp_)\w+/i,
+  ];
 
-  for (const pattern of suspiciousPatterns) {
+  const body = JSON.stringify(req.body || {});
+  const query = JSON.stringify(req.query || {});
+  const params = JSON.stringify(req.params || {});
+  const combined = body + query + params;
+
+  // Skip very short inputs (can't be SQL injection)
+  if (combined.length < 10) {
+    return next();
+  }
+
+  // Check HIGH confidence patterns - BLOCK
+  for (const pattern of highConfidencePatterns) {
     if (pattern.test(combined)) {
-      logger.warn(`[SECURITY] SQL injection attempt detected: ${req.method} ${req.originalUrl}`, {
+      logger.error(`[SECURITY] SQL injection BLOCKED: ${req.method} ${req.originalUrl}`, {
         ip: req.ip,
         user_agent: req.get('user-agent'),
-        body: req.body,
+        pattern: pattern.toString(),
+        user_id: (req as any).user?.id,
       });
 
-      // Don't block (could be false positive), but flag it
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'SQL_INJECTION_BLOCKED',
+          message: 'Request blocked due to potentially malicious content.',
+        },
+      });
+    }
+  }
+
+  // Check LOW confidence patterns - FLAG only
+  for (const pattern of lowConfidencePatterns) {
+    if (pattern.test(combined)) {
+      logger.warn(`[SECURITY] SQL injection pattern flagged (low confidence): ${req.method} ${req.originalUrl}`, {
+        ip: req.ip,
+        user_agent: req.get('user-agent'),
+        pattern: pattern.toString(),
+      });
+
       (req as any).securityFlags = (req as any).securityFlags || [];
-      (req as any).securityFlags.push('sql_injection_pattern');
+      (req as any).securityFlags.push('sql_injection_pattern_low');
       break;
     }
   }

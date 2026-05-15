@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { env } from './config/environment';
 import { AppDataSource } from './config/database';
 import { logger } from './shared/utils/logger';
@@ -64,6 +65,8 @@ import fraudDetectionRoutes from './modules/claims/routes/fraud-detection.routes
 // Sprint 23-24: Security, Scaling, BI Analytics
 import { securityHeaders, requestSanitizer, sqlInjectionDetector, securityAuditLog } from './shared/middleware/security-audit';
 import biAnalyticsRoutes from './modules/analytics/routes/bi-analytics.routes';
+// CSRF Protection
+import { csrfTokenProvider, csrfProtection } from './shared/middleware/csrf';
 
 const app = express();
 
@@ -76,6 +79,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(globalRateLimiter);
@@ -89,6 +93,9 @@ app.use(securityHeaders);
 app.use(requestSanitizer);
 app.use(sqlInjectionDetector);
 app.use(securityAuditLog);
+// CSRF Protection (after cookie-parser, before routes)
+app.use(csrfTokenProvider);
+app.use(csrfProtection);
 
 // Health check
 app.get('/health', (_req, res) => {

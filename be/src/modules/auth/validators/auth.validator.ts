@@ -1,5 +1,36 @@
 import Joi from 'joi';
 
+/**
+ * Shared password validation rules - MUST stay in sync with frontend (Zod).
+ *
+ * Rules:
+ * - Minimum 8 characters
+ * - At least 1 uppercase letter (A-Z)
+ * - At least 1 lowercase letter (a-z)
+ * - At least 1 digit (0-9)
+ * - At least 1 special character (@$!%*?&)
+ */
+const PASSWORD_MESSAGES = {
+  minLength: 'Mật khẩu phải có ít nhất 8 ký tự',
+  pattern: 'Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số, và 1 ký tự đặc biệt (@$!%*?&)',
+  required: 'Mật khẩu là bắt buộc',
+  confirmMismatch: 'Mật khẩu xác nhận không khớp',
+  confirmRequired: 'Xác nhận mật khẩu là bắt buộc',
+};
+
+// Pattern: requires uppercase + lowercase + digit + special char
+const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])/;
+
+const passwordField = Joi.string()
+  .min(8)
+  .pattern(PASSWORD_PATTERN)
+  .required()
+  .messages({
+    'string.min': PASSWORD_MESSAGES.minLength,
+    'string.pattern.base': PASSWORD_MESSAGES.pattern,
+    'any.required': PASSWORD_MESSAGES.required,
+  });
+
 export const registerSchema = Joi.object({
   email: Joi.string().email().required().messages({
     'string.email': 'Email format không hợp lệ',
@@ -12,18 +43,10 @@ export const registerSchema = Joi.object({
       'string.pattern.base': 'Số điện thoại phải có format +84xxxxxxxxx',
       'any.required': 'Số điện thoại là bắt buộc',
     }),
-  password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .required()
-    .messages({
-      'string.min': 'Password phải >= 8 ký tự',
-      'string.pattern.base': 'Password phải có chữ hoa, số, và ký tự đặc biệt',
-      'any.required': 'Password là bắt buộc',
-    }),
+  password: passwordField,
   confirm_password: Joi.string().valid(Joi.ref('password')).required().messages({
-    'any.only': 'Confirm password không khớp',
-    'any.required': 'Confirm password là bắt buộc',
+    'any.only': PASSWORD_MESSAGES.confirmMismatch,
+    'any.required': PASSWORD_MESSAGES.confirmRequired,
   }),
   full_name: Joi.string().min(2).max(100).required().messages({
     'string.min': 'Họ tên phải >= 2 ký tự',
@@ -78,18 +101,10 @@ export const resetPasswordSchema = Joi.object({
     'string.length': 'OTP phải có 6 ký tự',
     'any.required': 'OTP là bắt buộc',
   }),
-  new_password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .required()
-    .messages({
-      'string.min': 'Password phải >= 8 ký tự',
-      'string.pattern.base': 'Password phải có chữ hoa, số, và ký tự đặc biệt',
-      'any.required': 'Password mới là bắt buộc',
-    }),
+  new_password: passwordField,
   confirm_password: Joi.string().valid(Joi.ref('new_password')).required().messages({
-    'any.only': 'Confirm password không khớp',
-    'any.required': 'Confirm password là bắt buộc',
+    'any.only': PASSWORD_MESSAGES.confirmMismatch,
+    'any.required': PASSWORD_MESSAGES.confirmRequired,
   }),
 });
 
@@ -97,18 +112,10 @@ export const changePasswordSchema = Joi.object({
   current_password: Joi.string().required().messages({
     'any.required': 'Mật khẩu hiện tại là bắt buộc',
   }),
-  new_password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
-    .required()
-    .messages({
-      'string.min': 'Password phải >= 8 ký tự',
-      'string.pattern.base': 'Password phải có chữ hoa, số, và ký tự đặc biệt',
-      'any.required': 'Password mới là bắt buộc',
-    }),
+  new_password: passwordField,
   confirm_password: Joi.string().valid(Joi.ref('new_password')).required().messages({
-    'any.only': 'Confirm password không khớp',
-    'any.required': 'Confirm password là bắt buộc',
+    'any.only': PASSWORD_MESSAGES.confirmMismatch,
+    'any.required': PASSWORD_MESSAGES.confirmRequired,
   }),
 });
 
@@ -140,7 +147,5 @@ export const resendOtpSchema = Joi.object({
 });
 
 export const refreshTokenSchema = Joi.object({
-  refresh_token: Joi.string().required().messages({
-    'any.required': 'Refresh token là bắt buộc',
-  }),
+  refresh_token: Joi.string().optional(), // Now optional since it comes from cookie
 });

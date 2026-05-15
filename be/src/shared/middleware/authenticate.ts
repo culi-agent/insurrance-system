@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../../config/environment';
 import { UnauthorizedError } from '../errors/AppError';
 import { AuthenticatedRequest } from '../types';
+import { getAccessTokenFromCookie } from '../utils/cookie';
 
 export function authenticate(
   req: AuthenticatedRequest,
@@ -10,12 +11,21 @@ export function authenticate(
   next: NextFunction,
 ): void {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // 1. Try to get token from HttpOnly cookie first
+    let token = getAccessTokenFromCookie(req.cookies);
+
+    // 2. Fallback to Authorization header (for API clients / mobile)
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+    }
+
+    if (!token) {
       throw new UnauthorizedError('Access token is required');
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET) as {
       id: string;
       email: string;
