@@ -1,6 +1,9 @@
 import { BaseInsurerAdapter, QuoteRequest, QuoteResponse, InsurerHealth } from './adapters/base.adapter';
 import { BaoVietAdapter } from './adapters/bao-viet.adapter';
 import { PviAdapter } from './adapters/pvi.adapter';
+import { BaoMinhAdapter } from './adapters/bao-minh.adapter';
+import { ManulifeAdapter } from './adapters/manulife.adapter';
+import { DaiIchiAdapter } from './adapters/dai-ichi.adapter';
 import { logger } from '../../shared/utils/logger';
 
 /**
@@ -18,6 +21,9 @@ export class InsurerRegistry {
     // Register all available adapters
     this.registerAdapter(new BaoVietAdapter());
     this.registerAdapter(new PviAdapter());
+    this.registerAdapter(new BaoMinhAdapter());
+    this.registerAdapter(new ManulifeAdapter());
+    this.registerAdapter(new DaiIchiAdapter());
   }
 
   static getInstance(): InsurerRegistry {
