@@ -15,6 +15,8 @@ import ProfilePage from '@/pages/auth/ProfilePage';
 import CategoriesPage from '@/pages/products/CategoriesPage';
 import ProductListPage from '@/pages/products/ProductListPage';
 import ProductDetailPage from '@/pages/products/ProductDetailPage';
+import SearchPage from '@/pages/products/SearchPage';
+import MotorQuotePage from '@/pages/quotation/MotorQuotePage';
 
 function App() {
   return (
@@ -34,6 +36,11 @@ function App() {
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/:categorySlug" element={<ProductListPage />} />
         <Route path="/products/:slug" element={<ProductDetailPage />} />
+        <Route path="/search" element={<SearchPage />} />
+
+        {/* Quotation routes */}
+        <Route path="/bao-hiem-xe" element={<MotorQuotePage />} />
+        <Route path="/quotation/motor" element={<MotorQuotePage />} />
 
         {/* Protected routes */}
         <Route

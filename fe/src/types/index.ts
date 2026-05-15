@@ -143,3 +143,14 @@ export interface ApiError {
     details?: Array<{ field: string; message: string; code: string }>;
   };
 }
+
+
+// ============ Re-export Quotation Types ============
+export type {
+  MotorQuoteInput,
+  QuickQuoteResponse,
+  MultiInsurerQuoteResponse,
+  InsurerQuote,
+  CoverageDetail,
+  QuoteStep,
+} from './quotation';
