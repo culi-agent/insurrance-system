@@ -287,8 +287,144 @@ export class AuthService {
     OtpService.storeOtp(`reset:${customer.email}`, otp);
 
     OtpService.sendEmailOtp(customer.email, otp);
+    if (customer.phone) {
+      OtpService.sendSmsOtp(customer.phone, otp);
+    }
 
     return { message: 'Nếu tài khoản tồn tại, bạn sẽ nhận được OTP' };
+  }
+
+  async resetPassword(data: { email: string; otp: string; new_password: string }) {
+    const customer = await this.customerRepo.findOne({
+      where: { email: data.email },
+    });
+
+    if (!customer) {
+      throw new NotFoundError('Tài khoản không tồn tại');
+    }
+
+    // Verify OTP
+    const isValid = OtpService.verifyOtp(`reset:${data.email}`, data.otp);
+    if (!isValid) {
+      throw new ValidationError('OTP không hợp lệ hoặc đã hết hạn');
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(data.new_password, env.BCRYPT_ROUNDS);
+    customer.passwordHash = passwordHash;
+
+    // Reset lock state
+    customer.failedLoginAttempts = 0;
+    customer.lockedUntil = undefined;
+
+    await this.customerRepo.save(customer);
+
+    // Revoke all existing sessions for security
+    await this.sessionRepo.update(
+      { customerId: customer.id },
+      { isRevoked: true },
+    );
+
+    return { message: 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại.' };
+  }
+
+  async changePassword(userId: string, data: { current_password: string; new_password: string }) {
+    const customer = await this.customerRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!customer) {
+      throw new NotFoundError('Customer not found');
+    }
+
+    // Verify current password
+    if (customer.passwordHash) {
+      const isValid = await bcrypt.compare(data.current_password, customer.passwordHash);
+      if (!isValid) {
+        throw new UnauthorizedError('Mật khẩu hiện tại không đúng');
+      }
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(data.new_password, env.BCRYPT_ROUNDS);
+    customer.passwordHash = passwordHash;
+    await this.customerRepo.save(customer);
+
+    return { message: 'Đổi mật khẩu thành công' };
+  }
+
+  async updateProfile(userId: string, data: {
+    full_name?: string;
+    date_of_birth?: string;
+    gender?: string;
+    id_number?: string;
+    id_number_type?: string;
+    address?: Record<string, any>;
+    avatar_url?: string;
+    language?: string;
+  }) {
+    const customer = await this.customerRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!customer) {
+      throw new NotFoundError('Customer not found');
+    }
+
+    // Update fields
+    if (data.full_name !== undefined) customer.fullName = data.full_name;
+    if (data.date_of_birth !== undefined) customer.dateOfBirth = new Date(data.date_of_birth);
+    if (data.gender !== undefined) customer.gender = data.gender;
+    if (data.id_number !== undefined) customer.idNumber = data.id_number;
+    if (data.id_number_type !== undefined) customer.idNumberType = data.id_number_type;
+    if (data.address !== undefined) customer.address = data.address;
+    if (data.avatar_url !== undefined) customer.avatarUrl = data.avatar_url;
+    if (data.language !== undefined) customer.language = data.language;
+
+    await this.customerRepo.save(customer);
+
+    return {
+      id: customer.id,
+      email: customer.email,
+      phone: customer.phone,
+      full_name: customer.fullName,
+      date_of_birth: customer.dateOfBirth,
+      gender: customer.gender,
+      id_number: customer.idNumber,
+      id_number_type: customer.idNumberType,
+      address: customer.address,
+      avatar_url: customer.avatarUrl,
+      language: customer.language,
+      kyc_status: customer.kycStatus,
+      email_verified: customer.emailVerified,
+      phone_verified: customer.phoneVerified,
+      updated_at: customer.updatedAt,
+    };
+  }
+
+  async resendOtp(data: { email: string; type: 'verify' | 'reset' }) {
+    const customer = await this.customerRepo.findOne({
+      where: { email: data.email },
+    });
+
+    if (!customer) {
+      throw new NotFoundError('Tài khoản không tồn tại');
+    }
+
+    const prefix = data.type === 'reset' ? 'reset' : 'otp';
+    const otp = OtpService.generateOtp();
+    OtpService.storeOtp(`${prefix}:${data.email}`, otp);
+
+    // Send OTP
+    OtpService.sendEmailOtp(data.email, otp);
+    if (customer.phone) {
+      OtpService.sendSmsOtp(customer.phone, otp);
+    }
+
+    return {
+      message: 'OTP đã được gửi lại',
+      expires_at: new Date(Date.now() + env.OTP_EXPIRES_IN * 1000).toISOString(),
+    };
   }
 
   async getProfile(userId: string) {

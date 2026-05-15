@@ -10,6 +10,8 @@ import { errorHandler } from './shared/middleware/errorHandler';
 import { globalRateLimiter } from './shared/middleware/rateLimiter';
 import authRoutes from './modules/auth/routes/auth.routes';
 import productRoutes from './modules/products/routes/product.routes';
+import adminRoutes from './modules/admin/routes/admin.routes';
+import quotationRoutes from './modules/quotation/routes/quotation.routes';
 
 const app = express();
 
@@ -48,6 +50,8 @@ app.get('/api/v1', (_req, res) => {
         products: '/api/v1/products',
         categories: '/api/v1/products/categories',
         insurers: '/api/v1/products/insurers',
+        quotations: '/api/v1/quotations',
+        admin: '/api/v1/admin',
       },
     },
   });
@@ -56,6 +60,8 @@ app.get('/api/v1', (_req, res) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/quotations', quotationRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // 404 handler
 app.use((_req, res) => {
