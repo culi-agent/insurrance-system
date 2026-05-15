@@ -93,4 +93,84 @@ export class QuotationController {
       next(error);
     }
   };
+
+  /**
+   * Create a travel insurance quote (saved to DB)
+   * POST /api/v1/quotations/travel
+   */
+  createTravelQuote = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const customerId = req.user?.id;
+      const result = await this.quotationService.createTravelQuote(req.body, customerId);
+      ApiResponse.created(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get quick travel quote without saving
+   * POST /api/v1/quotations/travel/quick
+   */
+  getQuickTravelQuote = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.quotationService.getQuickTravelQuote(req.body);
+      ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get multi-insurer travel comparison quotes
+   * POST /api/v1/quotations/travel/compare
+   */
+  getMultiInsurerTravelQuotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.quotationService.getMultiInsurerTravelQuotes(req.body);
+      ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Create a health insurance quote (saved)
+   * POST /api/v1/quotations/health
+   */
+  createHealthQuote = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const customerId = req.user?.id;
+      const result = await this.quotationService.createHealthQuote(req.body, customerId);
+      ApiResponse.created(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get quick health quote
+   * POST /api/v1/quotations/health/quick
+   */
+  getQuickHealthQuote = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.quotationService.getQuickHealthQuote(req.body);
+      ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Get multi-insurer health quotes
+   * POST /api/v1/quotations/health/compare
+   */
+  getMultiInsurerHealthQuotes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.quotationService.getMultiInsurerHealthQuotes(req.body);
+      ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }

@@ -3,6 +3,8 @@ import { AppDataSource } from '../../../config/database';
 import { Quotation } from '../entities/Quotation';
 import { Product } from '../../products/entities/Product';
 import { QuoteEngineService, MotorQuoteInput, QuoteResult } from './quote-engine.service';
+import { TravelQuoteEngineService, TravelQuoteInput, TravelQuoteResult } from './travel-quote-engine.service';
+import { HealthQuoteEngineService, HealthQuoteInput, HealthQuoteResult } from './health-quote-engine.service';
 import { InsurerRegistry, QuoteRequest } from '../../insurer-integration';
 import { NotFoundError, ValidationError } from '../../../shared/errors/AppError';
 import { v4 as uuidv4 } from 'uuid';
@@ -258,6 +260,309 @@ export class QuotationService {
       message: 'Báo giá đã được chấp nhận. Vui lòng tiến hành thanh toán.',
       total_premium: quotation.totalPremium,
     };
+  }
+
+  /**
+   * Create a travel insurance quote
+   */
+  async createTravelQuote(input: TravelQuoteInput, customerId?: string) {
+    const quoteResult = TravelQuoteEngineService.calculateTravelQuote(input);
+    const quoteNumber = this.generateQuoteNumber('TRV');
+
+    const quotation = this.quotationRepo.create({
+      quoteNumber,
+      customerId,
+      productId: '00000000-0000-0000-0000-000000000000',
+      insurerId: '00000000-0000-0000-0000-000000000000',
+      insuranceType: 'travel',
+      inputData: input as any,
+      coverageOptions: {
+        plan_type: input.plan_type,
+        trip_type: input.trip_type,
+        destination_type: input.destination_type,
+        coverage_options: input.coverage_options,
+      },
+      premium: quoteResult.base_premium,
+      basePremium: quoteResult.base_premium,
+      discount: quoteResult.discount,
+      tax: quoteResult.tax,
+      totalPremium: quoteResult.total_premium,
+      premiumBreakdown: quoteResult.premium_breakdown as any,
+      status: 'quoted',
+      validUntil: new Date(quoteResult.valid_until),
+      metadata: {
+        coverage_details: quoteResult.coverage_details,
+        trip_duration_days: quoteResult.trip_duration_days,
+        premium_per_person: quoteResult.premium_per_person,
+        num_travelers: input.travelers.length,
+      },
+    });
+
+    const saved = await this.quotationRepo.save(quotation);
+
+    return {
+      quote_id: saved.id,
+      quote_number: saved.quoteNumber,
+      insurance_type: 'travel',
+      trip: {
+        type: input.trip_type,
+        destination: input.destination_type,
+        destination_country: input.destination_country,
+        departure_date: input.departure_date,
+        return_date: input.return_date,
+        duration_days: quoteResult.trip_duration_days,
+        purpose: input.trip_purpose,
+      },
+      travelers: input.travelers.length,
+      plan_type: input.plan_type,
+      premium: {
+        base: quoteResult.base_premium,
+        discount: quoteResult.discount,
+        tax: quoteResult.tax,
+        total: quoteResult.total_premium,
+        per_person: quoteResult.premium_per_person,
+      },
+      premium_breakdown: quoteResult.premium_breakdown,
+      coverage_details: quoteResult.coverage_details,
+      valid_until: quoteResult.valid_until,
+      status: 'quoted',
+    };
+  }
+
+  /**
+   * Get quick travel quote without saving
+   */
+  async getQuickTravelQuote(input: TravelQuoteInput) {
+    const quoteResult = TravelQuoteEngineService.calculateTravelQuote(input);
+
+    return {
+      premium: {
+        base: quoteResult.base_premium,
+        discount: quoteResult.discount,
+        tax: quoteResult.tax,
+        total: quoteResult.total_premium,
+        per_person: quoteResult.premium_per_person,
+      },
+      trip_duration_days: quoteResult.trip_duration_days,
+      premium_breakdown: quoteResult.premium_breakdown,
+      coverage_details: quoteResult.coverage_details,
+      valid_until: quoteResult.valid_until,
+    };
+  }
+
+  /**
+   * Get multi-insurer travel quotes for comparison
+   */
+  async getMultiInsurerTravelQuotes(input: TravelQuoteInput) {
+    const tripDays = Math.ceil(
+      (new Date(input.return_date).getTime() - new Date(input.departure_date).getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const quoteRequest: QuoteRequest = {
+      insurance_type: 'travel',
+      product_id: '',
+      customer_info: {
+        full_name: input.contact_name,
+        phone: input.contact_phone,
+        email: input.contact_email,
+      },
+      coverage_options: {
+        plan_type: input.plan_type,
+        trip_type: input.trip_type,
+        coverage_options: input.coverage_options,
+      },
+      input_data: {
+        trip_type: input.trip_type,
+        destination_type: input.destination_type,
+        destination_country: input.destination_country,
+        departure_date: input.departure_date,
+        return_date: input.return_date,
+        trip_purpose: input.trip_purpose,
+        trip_duration_days: tripDays,
+        num_travelers: input.travelers.length,
+        travelers: input.travelers,
+      },
+    };
+
+    const { quotes, errors } = await this.insurerRegistry.getMultiInsurerQuotes(quoteRequest);
+
+    const formattedQuotes = quotes.map((q) => ({
+      insurer: {
+        code: q.insurer_code,
+        name: q.insurer_name,
+        rating: q.metadata?.rating || 4.0,
+        features: q.metadata?.features || [],
+      },
+      product_name: q.product_name,
+      premium: {
+        base: q.base_premium,
+        discount: q.discount,
+        tax: q.tax,
+        total: q.total_premium,
+      },
+      premium_breakdown: q.premium_breakdown,
+      coverage_details: q.coverage_details,
+      valid_until: q.valid_until,
+      quote_ref: q.metadata?.quote_ref,
+    }));
+
+    return {
+      quotes: formattedQuotes,
+      total_quotes: formattedQuotes.length,
+      errors: errors.length > 0 ? errors : undefined,
+      trip: {
+        type: input.trip_type,
+        destination: input.destination_type,
+        departure_date: input.departure_date,
+        return_date: input.return_date,
+        duration_days: tripDays,
+        travelers: input.travelers.length,
+      },
+    };
+  }
+
+  /**
+   * Create a health insurance quote
+   */
+  async createHealthQuote(input: HealthQuoteInput, customerId?: string) {
+    const quoteResult = HealthQuoteEngineService.calculateHealthQuote(input);
+    const quoteNumber = this.generateQuoteNumber('HLT');
+
+    const quotation = this.quotationRepo.create({
+      quoteNumber,
+      customerId,
+      productId: '00000000-0000-0000-0000-000000000000',
+      insurerId: '00000000-0000-0000-0000-000000000000',
+      insuranceType: 'health',
+      inputData: input as any,
+      coverageOptions: {
+        plan_type: input.plan_type,
+        coverage_type: input.coverage_type,
+        coverage_options: input.coverage_options,
+      },
+      premium: quoteResult.base_premium,
+      basePremium: quoteResult.base_premium,
+      discount: quoteResult.discount,
+      tax: quoteResult.tax,
+      totalPremium: quoteResult.total_premium,
+      premiumBreakdown: quoteResult.premium_breakdown as any,
+      status: 'quoted',
+      validUntil: new Date(quoteResult.valid_until),
+      metadata: {
+        coverage_details: quoteResult.coverage_details,
+        waiting_periods: quoteResult.waiting_periods,
+        members_count: quoteResult.members_count,
+        premium_per_person: quoteResult.premium_per_person,
+      },
+    });
+
+    const saved = await this.quotationRepo.save(quotation);
+
+    return {
+      quote_id: saved.id,
+      quote_number: saved.quoteNumber,
+      insurance_type: 'health',
+      plan_type: input.plan_type,
+      members_count: quoteResult.members_count,
+      premium: {
+        base: quoteResult.base_premium,
+        discount: quoteResult.discount,
+        tax: quoteResult.tax,
+        total: quoteResult.total_premium,
+        per_person: quoteResult.premium_per_person,
+      },
+      premium_breakdown: quoteResult.premium_breakdown,
+      coverage_details: quoteResult.coverage_details,
+      waiting_periods: quoteResult.waiting_periods,
+      valid_until: quoteResult.valid_until,
+      status: 'quoted',
+    };
+  }
+
+  /**
+   * Get quick health quote without saving
+   */
+  async getQuickHealthQuote(input: HealthQuoteInput) {
+    const quoteResult = HealthQuoteEngineService.calculateHealthQuote(input);
+    return {
+      premium: {
+        base: quoteResult.base_premium,
+        discount: quoteResult.discount,
+        tax: quoteResult.tax,
+        total: quoteResult.total_premium,
+        per_person: quoteResult.premium_per_person,
+      },
+      members_count: quoteResult.members_count,
+      premium_breakdown: quoteResult.premium_breakdown,
+      coverage_details: quoteResult.coverage_details,
+      waiting_periods: quoteResult.waiting_periods,
+      valid_until: quoteResult.valid_until,
+    };
+  }
+
+  /**
+   * Get multi-insurer health quotes
+   */
+  async getMultiInsurerHealthQuotes(input: HealthQuoteInput) {
+    const quoteRequest: QuoteRequest = {
+      insurance_type: 'health',
+      product_id: '',
+      customer_info: {
+        full_name: input.applicant.full_name,
+        phone: input.applicant.phone,
+        email: input.applicant.email,
+      },
+      coverage_options: {
+        plan_type: input.plan_type,
+        coverage_type: input.coverage_type,
+        coverage_options: input.coverage_options,
+      },
+      input_data: {
+        plan_type: input.plan_type,
+        members_count: (input.family_members?.length || 0) + 1,
+        applicant_age: this.calculateAgeFromDob(input.applicant.date_of_birth),
+        is_family_plan: input.is_family_plan,
+        health_declaration: input.health_declaration,
+      },
+    };
+
+    const { quotes, errors } = await this.insurerRegistry.getMultiInsurerQuotes(quoteRequest);
+
+    const formattedQuotes = quotes.map((q) => ({
+      insurer: {
+        code: q.insurer_code,
+        name: q.insurer_name,
+        rating: q.metadata?.rating || 4.0,
+        features: q.metadata?.features || [],
+      },
+      product_name: q.product_name,
+      premium: {
+        base: q.base_premium,
+        discount: q.discount,
+        tax: q.tax,
+        total: q.total_premium,
+      },
+      coverage_details: q.coverage_details,
+      valid_until: q.valid_until,
+      quote_ref: q.metadata?.quote_ref,
+    }));
+
+    return {
+      quotes: formattedQuotes,
+      total_quotes: formattedQuotes.length,
+      errors: errors.length > 0 ? errors : undefined,
+      plan_type: input.plan_type,
+      members_count: (input.family_members?.length || 0) + 1,
+    };
+  }
+
+  private calculateAgeFromDob(dob: string): number {
+    const birth = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
   }
 
   private generateQuoteNumber(prefix: string): string {
