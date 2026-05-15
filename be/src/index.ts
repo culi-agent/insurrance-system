@@ -12,6 +12,7 @@ import authRoutes from './modules/auth/routes/auth.routes';
 import productRoutes from './modules/products/routes/product.routes';
 import adminRoutes from './modules/admin/routes/admin.routes';
 import quotationRoutes from './modules/quotation/routes/quotation.routes';
+import integrationRoutes from './modules/insurer-integration/routes/integration.routes';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.get('/api/v1', (_req, res) => {
         categories: '/api/v1/products/categories',
         insurers: '/api/v1/products/insurers',
         quotations: '/api/v1/quotations',
+        integrations: '/api/v1/integrations',
         admin: '/api/v1/admin',
       },
     },
@@ -62,6 +64,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/quotations', quotationRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/integrations', integrationRoutes);
 
 // 404 handler
 app.use((_req, res) => {
