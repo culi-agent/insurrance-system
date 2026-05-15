@@ -49,6 +49,21 @@ import systemConfigRoutes from './modules/admin/routes/system-config.routes';
 // Sprint 18: Performance & Monitoring
 import { responseTimeTracker, compressionHints, paginationLimiter } from './shared/middleware/performance';
 import { metricsMiddleware, metrics, alerting } from './shared/middleware/monitoring';
+// Sprint 19: Enterprise / B2B
+import enterpriseRoutes from './modules/enterprise/routes/enterprise.routes';
+import businessInsuranceRoutes from './modules/enterprise/routes/business-insurance.routes';
+// Sprint 20: API v2
+import apiV2Routes from './modules/api-v2/routes/api-v2.routes';
+// Sprint 21: White-label & Bancassurance
+import whitelabelRoutes from './modules/whitelabel/routes/whitelabel.routes';
+// Sprint 22: Loyalty, Chatbot, Surveys, Fraud Detection
+import loyaltyRoutes from './modules/loyalty/routes/loyalty.routes';
+import surveyRoutes from './modules/loyalty/routes/survey.routes';
+import chatbotRoutes from './modules/chatbot/routes/chatbot.routes';
+import fraudDetectionRoutes from './modules/claims/routes/fraud-detection.routes';
+// Sprint 23-24: Security, Scaling, BI Analytics
+import { securityHeaders, requestSanitizer, sqlInjectionDetector, securityAuditLog } from './shared/middleware/security-audit';
+import biAnalyticsRoutes from './modules/analytics/routes/bi-analytics.routes';
 
 const app = express();
 
@@ -69,6 +84,11 @@ app.use(responseTimeTracker);
 app.use(metricsMiddleware);
 app.use(compressionHints);
 app.use(paginationLimiter(100));
+// Sprint 23: Security middleware
+app.use(securityHeaders);
+app.use(requestSanitizer);
+app.use(sqlInjectionDetector);
+app.use(securityAuditLog);
 
 // Health check
 app.get('/health', (_req, res) => {
@@ -100,7 +120,7 @@ app.get('/api/v1', (_req, res) => {
     success: true,
     data: {
       message: 'Insurance System API v1',
-      version: '1.5.0',
+      version: '2.0.0',
       endpoints: {
         auth: '/api/v1/auth',
         products: '/api/v1/products',
@@ -119,8 +139,16 @@ app.get('/api/v1', (_req, res) => {
         partner: '/api/v1/partner',
         cms: '/api/v1/cms',
         campaigns: '/api/v1/campaigns',
+        enterprise: '/api/v1/enterprise',
+        business_insurance: '/api/v1/enterprise/insurance',
+        loyalty: '/api/v1/loyalty',
+        chatbot: '/api/v1/chatbot',
+        surveys: '/api/v1/surveys',
+        whitelabel: '/api/v1/whitelabel',
+        api_v2: '/api/v2',
         admin: '/api/v1/admin',
         analytics: '/api/v1/admin/analytics',
+        bi_analytics: '/api/v1/admin/analytics/bi',
       },
     },
   });
@@ -160,6 +188,21 @@ app.use('/api/v1/cms', cmsRoutes);
 // Sprint 17: Email Campaigns
 app.use('/api/v1/campaigns', emailCampaignRoutes);
 
+// Sprint 19: Enterprise / B2B
+app.use('/api/v1/enterprise', enterpriseRoutes);
+app.use('/api/v1/enterprise/insurance', businessInsuranceRoutes);
+
+// Sprint 20: API v2 (separate versioned path)
+app.use('/api/v2', apiV2Routes);
+
+// Sprint 21: White-label & Bancassurance
+app.use('/api/v1/whitelabel', whitelabelRoutes);
+
+// Sprint 22: Loyalty, Chatbot, Surveys
+app.use('/api/v1/loyalty', loyaltyRoutes);
+app.use('/api/v1/surveys', surveyRoutes);
+app.use('/api/v1/chatbot', chatbotRoutes);
+
 // Admin Routes
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin/claims', adminClaimsRouter);
@@ -174,6 +217,12 @@ app.use('/api/v1/admin/ab-testing', abTestingAdminRouter);
 app.use('/api/v1/admin/notifications', pushNotificationAdminRouter);
 app.use('/api/v1/admin/scheduler', scheduledNotificationRoutes);
 app.use('/api/v1/admin/config', systemConfigRoutes);
+
+// Sprint 22: Fraud Detection (admin)
+app.use('/api/v1/admin/fraud', fraudDetectionRoutes);
+
+// Sprint 24: BI Analytics (admin)
+app.use('/api/v1/admin/analytics', biAnalyticsRoutes);
 
 // 404 handler
 app.use((_req, res) => {
