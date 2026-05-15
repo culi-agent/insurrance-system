@@ -6,35 +6,103 @@
   body {
     @apply font-sans text-gray-900 antialiased;
   }
+
+  /* WCAG 2.1 - 2.4.7 Focus Visible: Enhanced focus indicators */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2;
+  }
+
+  /* Reduced motion preference - WCAG 2.3.3 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (forced-colors: active) {
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+      border: 2px solid ButtonText;
+    }
+  }
 }
 
 @layer components {
   .btn-primary {
     @apply bg-primary-600 text-white px-6 py-2.5 rounded-lg font-medium
       hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-      transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+      transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed
+      active:bg-primary-800;
   }
 
   .btn-secondary {
     @apply bg-white text-gray-700 px-6 py-2.5 rounded-lg font-medium border border-gray-300
       hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-      transition-colors duration-200;
+      transition-colors duration-200
+      active:bg-gray-100;
   }
 
   .btn-danger {
     @apply bg-red-600 text-white px-6 py-2.5 rounded-lg font-medium
       hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2
-      transition-colors duration-200;
+      transition-colors duration-200
+      active:bg-red-800;
   }
 
   .input-field {
     @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg
       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
-      placeholder-gray-400 transition-colors duration-200;
+      placeholder-gray-400 transition-colors duration-200
+      disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+
+  /* Error state for inputs - WCAG 3.3.1 */
+  .input-field[aria-invalid="true"] {
+    @apply border-red-500 focus:ring-red-500 focus:border-red-500;
   }
 
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-100 p-6
       hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Accessible link styles with minimum touch target - WCAG 2.5.5 */
+  .link-accessible {
+    @apply text-primary-600 hover:text-primary-700 underline
+      focus:outline-none focus:ring-2 focus:ring-primary-500 rounded
+      min-h-[44px] min-w-[44px] inline-flex items-center;
+  }
+}
+
+@layer utilities {
+  /* Visually hidden but accessible to screen readers */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sr-only-focusable:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
   }
 }

@@ -4,6 +4,11 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import './index.css';
+import './lib/i18n'; // Initialize i18n
+import { initA11yTesting } from './lib/a11y';
+
+// Initialize accessibility testing in development
+initA11yTesting();
 
 const queryClient = new QueryClient({
   defaultOptions: {

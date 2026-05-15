@@ -64,6 +64,8 @@ import fraudDetectionRoutes from './modules/claims/routes/fraud-detection.routes
 // Sprint 23-24: Security, Scaling, BI Analytics
 import { securityHeaders, requestSanitizer, sqlInjectionDetector, securityAuditLog } from './shared/middleware/security-audit';
 import biAnalyticsRoutes from './modules/analytics/routes/bi-analytics.routes';
+// Swagger API Documentation
+import { setupSwagger } from './docs/swagger-setup';
 
 const app = express();
 
@@ -89,6 +91,9 @@ app.use(securityHeaders);
 app.use(requestSanitizer);
 app.use(sqlInjectionDetector);
 app.use(securityAuditLog);
+
+// API Documentation (Swagger UI at /api/docs)
+setupSwagger(app);
 
 // Health check
 app.get('/health', (_req, res) => {

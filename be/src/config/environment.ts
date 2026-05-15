@@ -38,4 +38,16 @@ export const env = {
   // Account Lock
   MAX_LOGIN_ATTEMPTS: parseInt(process.env.MAX_LOGIN_ATTEMPTS || '5', 10),
   LOCK_DURATION_MINUTES: parseInt(process.env.LOCK_DURATION_MINUTES || '30', 10),
+
+  // Email Provider
+  EMAIL_PROVIDER: process.env.EMAIL_PROVIDER || 'mock',
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@insurance-system.vn',
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || 'Insurance System',
+
+  // SMS Provider
+  SMS_PROVIDER: process.env.SMS_PROVIDER || 'mock',
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID || '',
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN || '',
+  TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER || '',
 };
