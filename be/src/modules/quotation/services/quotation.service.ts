@@ -3,23 +3,26 @@ import { AppDataSource } from '../../../config/database';
 import { Quotation } from '../entities/Quotation';
 import { Product } from '../../products/entities/Product';
 import { QuoteEngineService, MotorQuoteInput, QuoteResult } from './quote-engine.service';
+import { InsurerRegistry, QuoteRequest } from '../../insurer-integration';
 import { NotFoundError, ValidationError } from '../../../shared/errors/AppError';
 import { v4 as uuidv4 } from 'uuid';
 
 export class QuotationService {
   private quotationRepo: Repository<Quotation>;
   private productRepo: Repository<Product>;
+  private insurerRegistry: InsurerRegistry;
 
   constructor() {
     this.quotationRepo = AppDataSource.getRepository(Quotation);
     this.productRepo = AppDataSource.getRepository(Product);
+    this.insurerRegistry = InsurerRegistry.getInstance();
   }
 
   /**
    * Generate a motor insurance quote
    */
   async createMotorQuote(input: MotorQuoteInput, customerId?: string) {
-    // Calculate quote
+    // Calculate quote using internal engine
     const quoteResult = QuoteEngineService.calculateMotorQuote(input);
 
     // Generate quote number
@@ -107,59 +110,78 @@ export class QuotationService {
   }
 
   /**
-   * Get multi-insurer quotes for comparison
+   * Get multi-insurer quotes for comparison using InsurerRegistry
+   * Sprint 3: S3-06 - Real multi-insurer aggregation
    */
   async getMultiInsurerQuotes(input: MotorQuoteInput) {
-    // In production, this would call each insurer's API
-    // For Sprint 1, we simulate with rate adjustments
-    const baseQuote = QuoteEngineService.calculateMotorQuote(input);
+    // Build the QuoteRequest for the adapter framework
+    const quoteRequest: QuoteRequest = {
+      insurance_type: 'motor',
+      product_id: '',
+      customer_info: {
+        full_name: input.owner_name,
+        id_number: input.owner_id_number,
+      },
+      coverage_options: {
+        coverage_type: input.coverage_type,
+        coverage_duration: input.coverage_duration,
+        additional_coverage: input.additional_coverage,
+      },
+      input_data: {
+        vehicle_type: input.vehicle_type,
+        vehicle_brand: input.vehicle_brand,
+        vehicle_model: input.vehicle_model,
+        vehicle_year: input.vehicle_year,
+        license_plate: input.license_plate,
+        engine_capacity: input.engine_capacity,
+        vehicle_value: input.vehicle_value,
+        seats: input.seats,
+        usage: input.usage,
+        no_claims_years: input.no_claims_years || 0,
+        has_garage: input.has_garage || false,
+        has_dashcam: input.has_dashcam || false,
+      },
+    };
 
-    const insurerQuotes = [
-      {
-        insurer: { name: 'Bảo Việt', code: 'BAOVIET', rating: 4.5 },
-        total_premium: baseQuote.total_premium,
-        premium_breakdown: baseQuote.premium_breakdown,
-        coverage_details: baseQuote.coverage_details,
-      },
-      {
-        insurer: { name: 'PVI Insurance', code: 'PVI', rating: 4.3 },
-        total_premium: Math.round(baseQuote.total_premium * 0.95), // 5% cheaper
-        premium_breakdown: {
-          ...baseQuote.premium_breakdown,
-          total: Math.round(baseQuote.total_premium * 0.95),
-        },
-        coverage_details: baseQuote.coverage_details,
-      },
-      {
-        insurer: { name: 'Bảo Minh', code: 'BAOMINH', rating: 4.2 },
-        total_premium: Math.round(baseQuote.total_premium * 1.02), // 2% more expensive
-        premium_breakdown: {
-          ...baseQuote.premium_breakdown,
-          total: Math.round(baseQuote.total_premium * 1.02),
-        },
-        coverage_details: baseQuote.coverage_details,
-      },
-      {
-        insurer: { name: 'MIC Insurance', code: 'MIC', rating: 4.1 },
-        total_premium: Math.round(baseQuote.total_premium * 0.92), // 8% cheaper
-        premium_breakdown: {
-          ...baseQuote.premium_breakdown,
-          total: Math.round(baseQuote.total_premium * 0.92),
-        },
-        coverage_details: baseQuote.coverage_details,
-      },
-    ];
+    // Call all insurer adapters via registry
+    const { quotes, errors } = await this.insurerRegistry.getMultiInsurerQuotes(quoteRequest);
 
-    // Sort by price
-    insurerQuotes.sort((a, b) => a.total_premium - b.total_premium);
+    // Format response for comparison view
+    const formattedQuotes = quotes.map((q) => ({
+      insurer: {
+        code: q.insurer_code,
+        name: q.insurer_name,
+        rating: q.metadata?.rating || 4.0,
+        features: q.metadata?.features || [],
+      },
+      product_name: q.product_name,
+      premium: {
+        base: q.base_premium,
+        discount: q.discount,
+        tax: q.tax,
+        total: q.total_premium,
+      },
+      premium_breakdown: q.premium_breakdown,
+      coverage_details: q.coverage_details,
+      valid_until: q.valid_until,
+      quote_ref: q.metadata?.quote_ref,
+    }));
 
     return {
-      quotes: insurerQuotes,
-      valid_until: baseQuote.valid_until,
+      quotes: formattedQuotes,
+      total_quotes: formattedQuotes.length,
+      errors: errors.length > 0 ? errors : undefined,
       vehicle: {
+        type: input.vehicle_type,
         brand: input.vehicle_brand,
         model: input.vehicle_model,
         year: input.vehicle_year,
+        value: input.vehicle_value,
+      },
+      coverage: {
+        type: input.coverage_type,
+        duration: input.coverage_duration,
+        additional: input.additional_coverage,
       },
     };
   }
