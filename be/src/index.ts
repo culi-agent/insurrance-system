@@ -10,6 +10,9 @@ import { errorHandler } from './shared/middleware/errorHandler';
 import { globalRateLimiter } from './shared/middleware/rateLimiter';
 import authRoutes from './modules/auth/routes/auth.routes';
 import productRoutes from './modules/products/routes/product.routes';
+import quoteRoutes from './modules/quotes/routes/quote.routes';
+import policyRoutes from './modules/policies/routes/policy.routes';
+import { InsurerRegistry } from './modules/integrations/insurer-adapter';
 
 const app = express();
 
@@ -46,6 +49,8 @@ app.get('/api/v1', (_req, res) => {
       endpoints: {
         auth: '/api/v1/auth',
         products: '/api/v1/products',
+        quotes: '/api/v1/quotes',
+        policies: '/api/v1/policies',
         categories: '/api/v1/products/categories',
         insurers: '/api/v1/products/insurers',
       },
@@ -56,6 +61,8 @@ app.get('/api/v1', (_req, res) => {
 // API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
+app.use('/api/v1/quotes', quoteRoutes);
+app.use('/api/v1/policies', policyRoutes);
 
 // 404 handler
 app.use((_req, res) => {
@@ -77,6 +84,10 @@ async function bootstrap() {
     // Initialize database connection
     await AppDataSource.initialize();
     logger.info('Database connected successfully');
+
+    // Initialize insurer adapters
+    InsurerRegistry.initialize();
+    logger.info('Insurer integrations initialized');
 
     // Start server
     app.listen(env.PORT, () => {
