@@ -64,6 +64,7 @@ app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/quotes', quoteRoutes);
 app.use('/api/v1/policies', policyRoutes);
 
+
 // 404 handler
 app.use((_req, res) => {
   res.status(404).json({
@@ -84,7 +85,6 @@ async function bootstrap() {
     // Initialize database connection
     await AppDataSource.initialize();
     logger.info('Database connected successfully');
-
     // Initialize insurer adapters
     InsurerRegistry.initialize();
     logger.info('Insurer integrations initialized');
