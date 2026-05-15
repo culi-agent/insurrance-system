@@ -33,3 +33,49 @@
 | 4 | [Stakeholder Analysis](03-business-analysis/04-stakeholder-analysis.md) | 12 stakeholders, RACI matrix |
 | 5 | [Risk Analysis](03-business-analysis/05-risk-analysis.md) | Risk register, mitigation plans, BCP |
 | 6 | [Feasibility Study](03-business-analysis/06-feasibility-study.md) | Market, Technical, Financial, Legal feasibility |
+
+### 📁 04-Development
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [README](04-development/01-source-code/01-README.md) | Hướng dẫn tổng quan source code |
+| 2 | [CONTRIBUTING](04-development/01-source-code/02-CONTRIBUTING.md) | Hướng dẫn đóng góp |
+| 3 | [CHANGELOG](04-development/01-source-code/03-CHANGELOG.md) | Lịch sử thay đổi |
+| 4 | [Code Style Guide](04-development/01-source-code/04-code-style-guide.md) | Quy chuẩn viết code |
+| 5 | [Git Workflow](04-development/02-development-process/01-git-workflow.md) | Quy trình Git |
+| 6 | [Branching Strategy](04-development/02-development-process/02-branching-strategy.md) | Chiến lược branching |
+| 7 | [Commit Convention](04-development/02-development-process/03-commit-convention.md) | Quy ước commit message |
+| 8 | [Pull Request Template](04-development/02-development-process/04-pull-request-template.md) | Template PR |
+| 9 | [Code Review Checklist](04-development/02-development-process/05-code-review-checklist.md) | Checklist review code |
+| 10 | [Environment Variables](04-development/03-environment/01-environment-variables.md) | Biến môi trường |
+| 11 | [Local Setup Guide](04-development/03-environment/02-local-setup-guide.md) | Hướng dẫn cài đặt local |
+| 12 | [Deployment Guide](04-development/03-environment/03-deployment-guide.md) | Hướng dẫn deploy |
+
+### 📁 05-DevOps & Infrastructure
+
+#### 🏗️ Infrastructure
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Infrastructure Diagram](05-devops-infrastructure/01-infrastructure/01-infrastructure-diagram.md) | Sơ đồ hạ tầng tổng quan, sizing, DR, chi phí |
+| 2 | [Network Architecture](05-devops-infrastructure/01-infrastructure/02-network-architecture.md) | VPC, subnets, traffic flows, security groups, DNS |
+| 3 | [Cloud Architecture](05-devops-infrastructure/01-infrastructure/03-cloud-architecture.md) | AWS services, EKS, data layer, IAM, encryption |
+
+#### 🔄 CI/CD
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [CI/CD Pipeline](05-devops-infrastructure/02-cicd/01-cicd-pipeline.md) | GitHub Actions + ArgoCD, workflows, quality gates |
+| 2 | [Deployment Workflow](05-devops-infrastructure/02-cicd/02-deployment-workflow.md) | Quy trình deploy standard, hotfix, canary |
+| 3 | [Rollback Procedure](05-devops-infrastructure/02-cicd/03-rollback-procedure.md) | Quy trình rollback, scenarios, automation |
+
+#### 📊 Monitoring
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Logging Strategy](05-devops-infrastructure/03-monitoring/01-logging-strategy.md) | Winston + Fluent Bit + ELK, formats, PII masking |
+| 2 | [Monitoring Setup](05-devops-infrastructure/03-monitoring/02-monitoring-setup.md) | Prometheus + Grafana + X-Ray, metrics, dashboards |
+| 3 | [Alerting Rules](05-devops-infrastructure/03-monitoring/03-alerting-rules.md) | Severity levels, AlertManager, alert rules |
+| 4 | [Incident Response Runbook](05-devops-infrastructure/03-monitoring/04-incident-response-runbook.md) | Incident classification, response process, runbooks |
+
+#### 🐳 Container & Cloud
+| # | Document | Description |
+|---|----------|-------------|
+| 1 | [Docker Docs](05-devops-infrastructure/04-container-cloud/01-docker-docs.md) | Multi-stage Dockerfiles, docker-compose, ECR, security |
+| 2 | [Helm Charts](05-devops-infrastructure/04-container-cloud/02-helm-charts.md) | Base chart, per-service overrides, environments, operations |
