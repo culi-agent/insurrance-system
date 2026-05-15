@@ -1,9 +1,11 @@
 import { Response, NextFunction } from 'express';
 import { ClaimsService } from '../services/claims.service';
+import { SettlementService } from '../services/settlement.service';
 import { ApiResponse } from '../../../shared/utils/response';
 import { AuthenticatedRequest } from '../../../shared/types';
 
 const claimsService = new ClaimsService();
+const settlementService = new SettlementService();
 
 export class ClaimsController {
   // Customer endpoints
@@ -81,6 +83,36 @@ export class ClaimsController {
       const result = await claimsService.addMessage(
         req.params.claimId, req.user!.id, 'Nhân viên xử lý', 'agent', req.body.message
       );
+      return ApiResponse.success(res, result);
+    } catch (error) { next(error); }
+  }
+
+  // Settlement endpoints
+  static async initiateSettlement(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await settlementService.initiateSettlement(req.params.claimId, req.body);
+      return ApiResponse.success(res, result);
+    } catch (error) { next(error); }
+  }
+
+  static async getSettlementStatus(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await settlementService.getSettlementStatus(req.params.claimId, req.user!.id);
+      return ApiResponse.success(res, result);
+    } catch (error) { next(error); }
+  }
+
+  static async fastTrackClaim(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await settlementService.fastTrackClaim(req.params.claimId);
+      return ApiResponse.success(res, result);
+    } catch (error) { next(error); }
+  }
+
+  // Appeal endpoint
+  static async submitAppeal(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await settlementService.submitAppeal(req.params.claimId, req.user!.id, req.body);
       return ApiResponse.success(res, result);
     } catch (error) { next(error); }
   }

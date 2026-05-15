@@ -16,26 +16,54 @@ import CategoriesPage from '@/pages/products/CategoriesPage';
 import ProductListPage from '@/pages/products/ProductListPage';
 import ProductDetailPage from '@/pages/products/ProductDetailPage';
 import SearchPage from '@/pages/products/SearchPage';
+import ComparisonPage from '@/pages/products/ComparisonPage';
+
+// Quotation pages
 import MotorQuotePage from '@/pages/quotation/MotorQuotePage';
 import TravelQuotePage from '@/pages/quotation/TravelQuotePage';
 import HealthQuotePage from '@/pages/quotation/HealthQuotePage';
+import LifeQuotePage from '@/pages/quotation/LifeQuotePage';
+import HomeQuotePage from '@/pages/quotation/HomeQuotePage';
+
+// Purchase pages
 import PurchaseWizardPage from '@/pages/purchase/PurchaseWizardPage';
 import PaymentResultPage from '@/pages/purchase/PaymentResultPage';
+import LifePurchasePage from '@/pages/purchase/LifePurchasePage';
+
+// Dashboard pages
 import DashboardPage from '@/pages/dashboard/DashboardPage';
 import PoliciesPage from '@/pages/dashboard/PoliciesPage';
 import PolicyDetailPage from '@/pages/dashboard/PolicyDetailPage';
+
+// Claims pages
+import ClaimSubmitPage from '@/pages/claims/ClaimSubmitPage';
+import ClaimsListPage from '@/pages/claims/ClaimsListPage';
+import ClaimDetailPage from '@/pages/claims/ClaimDetailPage';
+
+// Renewal pages (Sprint 11)
+import RenewalPage from '@/pages/renewal/RenewalPage';
+import CancellationPage from '@/pages/renewal/CancellationPage';
+
+// Referral pages (Sprint 11)
+import ReferralPage from '@/pages/referral/ReferralPage';
+
+// Recommendation pages (Sprint 14)
+import RecommendationPage from '@/pages/recommendation/RecommendationPage';
+
+// Static pages
 import AboutPage from '@/pages/static/AboutPage';
 import ContactPage from '@/pages/static/ContactPage';
+
+// Admin pages
 import AdminLayout from '@/pages/admin/AdminLayout';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminProductsPage from '@/pages/admin/AdminProductsPage';
 import AdminCustomersPage from '@/pages/admin/AdminCustomersPage';
 import AdminPoliciesPage from '@/pages/admin/AdminPoliciesPage';
 import AdminClaimsPage from '@/pages/admin/AdminClaimsPage';
-import ComparisonPage from '@/pages/products/ComparisonPage';
-import ClaimSubmitPage from '@/pages/claims/ClaimSubmitPage';
-import ClaimsListPage from '@/pages/claims/ClaimsListPage';
-import ClaimDetailPage from '@/pages/claims/ClaimDetailPage';
+import AdminAnalyticsPage from '@/pages/admin/AdminAnalyticsPage';
+import AdminAuditLogPage from '@/pages/admin/AdminAuditLogPage';
+import AdminPartnersPage from '@/pages/admin/AdminPartnersPage';
 
 function App() {
   return (
@@ -67,10 +95,15 @@ function App() {
         <Route path="/quotation/travel" element={<TravelQuotePage />} />
         <Route path="/bao-hiem-suc-khoe" element={<HealthQuotePage />} />
         <Route path="/quotation/health" element={<HealthQuotePage />} />
+        <Route path="/bao-hiem-nhan-tho" element={<LifeQuotePage />} />
+        <Route path="/quotation/life" element={<LifeQuotePage />} />
+        <Route path="/bao-hiem-nha" element={<HomeQuotePage />} />
+        <Route path="/quotation/home" element={<HomeQuotePage />} />
 
         {/* Purchase routes */}
         <Route path="/purchase" element={<PurchaseWizardPage />} />
         <Route path="/purchase/result" element={<PaymentResultPage />} />
+        <Route path="/purchase/life" element={<ProtectedRoute><LifePurchasePage /></ProtectedRoute>} />
 
         {/* Protected: Dashboard */}
         <Route
@@ -97,6 +130,30 @@ function App() {
           path="/claims/submit"
           element={<ProtectedRoute><ClaimSubmitPage /></ProtectedRoute>}
         />
+
+        {/* Protected: Renewal (Sprint 11) */}
+        <Route
+          path="/dashboard/renewal"
+          element={<ProtectedRoute><RenewalPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/dashboard/policies/:policyId/cancel"
+          element={<ProtectedRoute><CancellationPage /></ProtectedRoute>}
+        />
+
+        {/* Protected: Referral (Sprint 11) */}
+        <Route
+          path="/dashboard/referral"
+          element={<ProtectedRoute><ReferralPage /></ProtectedRoute>}
+        />
+
+        {/* Protected: Recommendations (Sprint 14) */}
+        <Route
+          path="/dashboard/recommendations"
+          element={<ProtectedRoute><RecommendationPage /></ProtectedRoute>}
+        />
+
+        {/* Protected: Profile */}
         <Route
           path="/profile"
           element={<ProtectedRoute><ProfilePage /></ProtectedRoute>}
@@ -110,6 +167,9 @@ function App() {
         <Route path="/admin/customers" element={<AdminCustomersPage />} />
         <Route path="/admin/policies" element={<AdminPoliciesPage />} />
         <Route path="/admin/claims" element={<AdminClaimsPage />} />
+        <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
+        <Route path="/admin/audit-log" element={<AdminAuditLogPage />} />
+        <Route path="/admin/partners" element={<AdminPartnersPage />} />
       </Route>
     </Routes>
   );
