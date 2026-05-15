@@ -26,6 +26,29 @@ import analyticsRoutes from './modules/analytics/routes/analytics.routes';
 import recommendationRoutes from './modules/recommendation/routes/recommendation.routes';
 // Sprint 15: A/B Testing
 import abTestingRoutes, { abTestingAdminRouter } from './modules/ab-testing/routes/ab-testing.routes';
+// Sprint 16: Mobile APIs, Advanced Analytics
+import mobilePurchaseRoutes from './modules/mobile/routes/mobile-purchase.routes';
+import mobileDashboardRoutes from './modules/mobile/routes/mobile-dashboard.routes';
+import pushNotificationRoutes, { pushNotificationAdminRouter } from './modules/mobile/routes/push-notification.routes';
+import segmentationRoutes from './modules/analytics/routes/segmentation.routes';
+import customerAnalyticsRoutes from './modules/analytics/routes/customer-analytics.routes';
+import productPerformanceRoutes from './modules/analytics/routes/product-performance.routes';
+import financialReportRoutes from './modules/analytics/routes/financial-report.routes';
+import reportExportRoutes from './modules/analytics/routes/report-export.routes';
+import smartPrefillRoutes from './modules/quotation/routes/smart-prefill.routes';
+// Sprint 17: Mobile Claims, AI v2, Partner Portal, Email Campaigns, CMS
+import mobileClaimsRoutes from './modules/mobile/routes/mobile-claims.routes';
+import mobileClaimsTrackingRoutes from './modules/mobile/routes/mobile-claims-tracking.routes';
+import mobileProfileRoutes from './modules/mobile/routes/mobile-profile.routes';
+import recommendationV2Routes from './modules/recommendation/routes/recommendation-v2.routes';
+import emailCampaignRoutes from './modules/notifications/routes/email-campaign.routes';
+import scheduledNotificationRoutes from './modules/notifications/routes/scheduled-notification.routes';
+import partnerPortalRoutes from './modules/partner/routes/partner-portal.routes';
+import cmsRoutes from './modules/admin/routes/cms.routes';
+import systemConfigRoutes from './modules/admin/routes/system-config.routes';
+// Sprint 18: Performance & Monitoring
+import { responseTimeTracker, compressionHints, paginationLimiter } from './shared/middleware/performance';
+import { metricsMiddleware, metrics, alerting } from './shared/middleware/monitoring';
 
 const app = express();
 
@@ -41,15 +64,34 @@ app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(globalRateLimiter);
+// Sprint 18: Performance & Monitoring middleware
+app.use(responseTimeTracker);
+app.use(metricsMiddleware);
+app.use(compressionHints);
+app.use(paginationLimiter(100));
 
 // Health check
 app.get('/health', (_req, res) => {
+  const health = metrics.getMetrics();
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
     uptime: process.uptime(),
+    response_time_p95: health.response_time.p95,
+    memory_mb: health.memory.heap_used_mb,
   });
+});
+
+// Detailed health check (internal)
+app.get('/health/detailed', (_req, res) => {
+  res.json(metrics.getMetrics());
+});
+
+// Alerts endpoint
+app.get('/health/alerts', (_req, res) => {
+  alerting.checkThresholds();
+  res.json(alerting.getAlerts());
 });
 
 // API Info
@@ -70,8 +112,13 @@ app.get('/api/v1', (_req, res) => {
         renewal: '/api/v1/renewal',
         referrals: '/api/v1/referrals',
         recommendations: '/api/v1/recommendations',
+        recommendations_v2: '/api/v1/recommendations/v2',
         integrations: '/api/v1/integrations',
         ab_testing: '/api/v1/ab-testing',
+        mobile: '/api/v1/mobile',
+        partner: '/api/v1/partner',
+        cms: '/api/v1/cms',
+        campaigns: '/api/v1/campaigns',
         admin: '/api/v1/admin',
         analytics: '/api/v1/admin/analytics',
       },
@@ -83,6 +130,7 @@ app.get('/api/v1', (_req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/quotations', quotationRoutes);
+app.use('/api/v1/quotations', smartPrefillRoutes);
 app.use('/api/v1/purchase', purchaseRoutes);
 app.use('/api/v1/purchase', paymentCallbackRouter);
 app.use('/api/v1/purchase', beneficiaryRoutes);
@@ -91,15 +139,41 @@ app.use('/api/v1/claims', claimsRoutes);
 app.use('/api/v1/renewal', renewalRoutes);
 app.use('/api/v1/referrals', referralRoutes);
 app.use('/api/v1/recommendations', recommendationRoutes);
+app.use('/api/v1/recommendations/v2', recommendationV2Routes);
 app.use('/api/v1/ab-testing', abTestingRoutes);
 app.use('/api/v1/integrations', integrationRoutes);
+
+// Sprint 16-17: Mobile API Routes
+app.use('/api/v1/mobile', mobilePurchaseRoutes);
+app.use('/api/v1/mobile', mobileDashboardRoutes);
+app.use('/api/v1/mobile', mobileProfileRoutes);
+app.use('/api/v1/mobile/notifications', pushNotificationRoutes);
+app.use('/api/v1/mobile/claims', mobileClaimsRoutes);
+app.use('/api/v1/mobile/claims/tracking', mobileClaimsTrackingRoutes);
+
+// Sprint 17: Partner Portal
+app.use('/api/v1/partner', partnerPortalRoutes);
+
+// Sprint 17: CMS (public + admin)
+app.use('/api/v1/cms', cmsRoutes);
+
+// Sprint 17: Email Campaigns
+app.use('/api/v1/campaigns', emailCampaignRoutes);
 
 // Admin Routes
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin/claims', adminClaimsRouter);
 app.use('/api/v1/admin/analytics', analyticsRoutes);
+app.use('/api/v1/admin/analytics/customers', customerAnalyticsRoutes);
+app.use('/api/v1/admin/analytics/products', productPerformanceRoutes);
+app.use('/api/v1/admin/analytics/financial', financialReportRoutes);
+app.use('/api/v1/admin/analytics/segmentation', segmentationRoutes);
+app.use('/api/v1/admin/analytics', reportExportRoutes);
 app.use('/api/v1/admin/renewal', renewalAdminRouter);
 app.use('/api/v1/admin/ab-testing', abTestingAdminRouter);
+app.use('/api/v1/admin/notifications', pushNotificationAdminRouter);
+app.use('/api/v1/admin/scheduler', scheduledNotificationRoutes);
+app.use('/api/v1/admin/config', systemConfigRoutes);
 
 // 404 handler
 app.use((_req, res) => {
