@@ -1,6 +1,5 @@
 import api from '@/lib/api';
 import type {
-  AuthResponse,
   LoginRequest,
   RegisterRequest,
   SocialLoginRequest,
@@ -11,6 +10,17 @@ import type {
   ChangePasswordRequest,
   User,
 } from '@/types';
+
+export interface LoginResponse {
+  token_type: string;
+  expires_in: number;
+  user: User;
+}
+
+export interface RefreshResponse {
+  token_type: string;
+  expires_in: number;
+}
 
 export const authService = {
   register: async (data: RegisterRequest) => {
@@ -28,12 +38,12 @@ export const authService = {
     return response.data.data;
   },
 
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
+  login: async (data: LoginRequest): Promise<LoginResponse> => {
     const response = await api.post('/auth/login', data);
     return response.data.data;
   },
 
-  socialLogin: async (data: SocialLoginRequest): Promise<AuthResponse> => {
+  socialLogin: async (data: SocialLoginRequest): Promise<LoginResponse> => {
     const response = await api.post('/auth/social-login', data);
     return response.data.data;
   },
@@ -68,8 +78,9 @@ export const authService = {
     return response.data.data;
   },
 
-  refreshToken: async (refreshToken: string) => {
-    const response = await api.post('/auth/refresh-token', { refresh_token: refreshToken });
+  refreshToken: async (): Promise<RefreshResponse> => {
+    // Refresh token is automatically sent via HttpOnly cookie
+    const response = await api.post('/auth/refresh-token');
     return response.data.data;
   },
 };
