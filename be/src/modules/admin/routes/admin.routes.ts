@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
-import { authenticate, authorize } from '../../../shared/middleware/authenticate';
+import { authenticate } from '../../../shared/middleware/authenticate';
+import { requireRoles, requirePermission } from '../../../shared/middleware/rbac';
 import { validate } from '../../../shared/middleware/validate';
 import {
   createProductSchema,
@@ -15,9 +16,9 @@ import {
 const router = Router();
 const adminController = new AdminController();
 
-// All admin routes require authentication + admin role
+// All admin routes require authentication + admin/superadmin role
 router.use(authenticate);
-router.use(authorize('admin'));
+router.use(requireRoles('admin', 'superadmin'));
 
 // Dashboard
 router.get('/dashboard', adminController.getDashboardStats);
