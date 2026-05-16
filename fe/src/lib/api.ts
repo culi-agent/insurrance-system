@@ -6,21 +6,24 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with every request
 });
 
-// Request interceptor - attach token
+// Request interceptor - attach CSRF token for state-changing requests
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().accessToken;
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // CSRF token will be read from meta tag or cookie (non-HttpOnly)
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+      || getCsrfFromCookie();
+    if (csrfToken && config.method !== 'get') {
+      config.headers['X-CSRF-Token'] = csrfToken;
     }
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-// Response interceptor - handle token refresh
+// Response interceptor - handle token refresh via cookie
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -29,23 +32,13 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = useAuthStore.getState().refreshToken;
-      if (refreshToken) {
-        try {
-          const response = await axios.post('/api/v1/auth/refresh-token', {
-            refresh_token: refreshToken,
-          });
+      try {
+        // Call refresh endpoint - cookies are sent automatically
+        await axios.post('/api/v1/auth/refresh-token', {}, { withCredentials: true });
 
-          const { access_token, refresh_token } = response.data.data;
-          useAuthStore.getState().setTokens(access_token, refresh_token);
-
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return api(originalRequest);
-        } catch {
-          useAuthStore.getState().logout();
-          window.location.href = '/login';
-        }
-      } else {
+        // Retry the original request (new cookie is now set)
+        return api(originalRequest);
+      } catch {
         useAuthStore.getState().logout();
         window.location.href = '/login';
       }
@@ -54,5 +47,13 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+/**
+ * Read CSRF token from a non-HttpOnly cookie (double-submit pattern)
+ */
+function getCsrfFromCookie(): string | null {
+  const match = document.cookie.match(/(?:^|; )csrf_token=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
 
 export default api;

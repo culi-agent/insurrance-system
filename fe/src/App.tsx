@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import MainLayout from '@/components/layouts/MainLayout';
 import AuthLayout from '@/components/layouts/AuthLayout';
 import ProtectedRoute from '@/components/common/ProtectedRoute';
+import AdminRoute from '@/components/common/AdminRoute';
 
 // Pages
 import HomePage from '@/pages/HomePage';
@@ -12,6 +13,7 @@ import VerifyOtpPage from '@/pages/auth/VerifyOtpPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/auth/ResetPasswordPage';
 import ProfilePage from '@/pages/auth/ProfilePage';
+import UnauthorizedPage from '@/pages/UnauthorizedPage';
 import CategoriesPage from '@/pages/products/CategoriesPage';
 import ProductListPage from '@/pages/products/ProductListPage';
 import ProductDetailPage from '@/pages/products/ProductDetailPage';
@@ -76,6 +78,9 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
+
+      {/* Unauthorized page */}
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* Main routes */}
       <Route element={<MainLayout />}>
@@ -160,16 +165,16 @@ function App() {
         />
       </Route>
 
-      {/* Admin routes */}
+      {/* Admin routes - protected by AdminRoute (requires admin or superadmin role) */}
       <Route element={<AdminLayout />}>
-        <Route path="/admin" element={<AdminDashboardPage />} />
-        <Route path="/admin/products" element={<AdminProductsPage />} />
-        <Route path="/admin/customers" element={<AdminCustomersPage />} />
-        <Route path="/admin/policies" element={<AdminPoliciesPage />} />
-        <Route path="/admin/claims" element={<AdminClaimsPage />} />
-        <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
-        <Route path="/admin/audit-log" element={<AdminAuditLogPage />} />
-        <Route path="/admin/partners" element={<AdminPartnersPage />} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route path="/admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
+        <Route path="/admin/customers" element={<AdminRoute><AdminCustomersPage /></AdminRoute>} />
+        <Route path="/admin/policies" element={<AdminRoute><AdminPoliciesPage /></AdminRoute>} />
+        <Route path="/admin/claims" element={<AdminRoute><AdminClaimsPage /></AdminRoute>} />
+        <Route path="/admin/analytics" element={<AdminRoute><AdminAnalyticsPage /></AdminRoute>} />
+        <Route path="/admin/audit-log" element={<AdminRoute><AdminAuditLogPage /></AdminRoute>} />
+        <Route path="/admin/partners" element={<AdminRoute><AdminPartnersPage /></AdminRoute>} />
       </Route>
     </Routes>
   );

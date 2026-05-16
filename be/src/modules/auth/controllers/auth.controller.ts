@@ -3,6 +3,7 @@ import { AuthService } from '../services/auth.service';
 import { SocialAuthService } from '../services/social-auth.service';
 import { ApiResponse } from '../../../shared/utils/response';
 import { AuthenticatedRequest } from '../../../shared/types';
+import { setAuthCookies, clearAuthCookies, getRefreshTokenFromCookie } from '../../../shared/utils/cookie';
 
 export class AuthController {
   private authService: AuthService;
@@ -25,7 +26,20 @@ export class AuthController {
   verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await this.authService.verifyOtp(req.body);
-      ApiResponse.success(res, result);
+
+      // Set tokens as HttpOnly cookies
+      if (result.access_token && result.refresh_token) {
+        setAuthCookies(res, {
+          accessToken: result.access_token,
+          refreshToken: result.refresh_token,
+        });
+      }
+
+      // Return response without tokens in body
+      ApiResponse.success(res, {
+        verified: result.verified,
+        expires_in: result.expires_in,
+      });
     } catch (error) {
       next(error);
     }
@@ -38,7 +52,19 @@ export class AuthController {
         ip_address: req.ip,
         device_info: req.headers['user-agent'],
       });
-      ApiResponse.success(res, result);
+
+      // Set tokens as HttpOnly cookies
+      setAuthCookies(res, {
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token,
+      });
+
+      // Return user info without tokens in body
+      ApiResponse.success(res, {
+        token_type: 'cookie',
+        expires_in: result.expires_in,
+        user: result.user,
+      });
     } catch (error) {
       next(error);
     }
@@ -62,7 +88,22 @@ export class AuthController {
         req.ip,
         req.headers['user-agent'],
       );
-      ApiResponse.success(res, result);
+
+      // Set tokens as HttpOnly cookies
+      if (result.access_token && result.refresh_token) {
+        setAuthCookies(res, {
+          accessToken: result.access_token,
+          refreshToken: result.refresh_token,
+        });
+      }
+
+      // Return user info without tokens in body
+      ApiResponse.success(res, {
+        token_type: 'cookie',
+        expires_in: result.expires_in,
+        user: result.user,
+        is_new_user: result.is_new_user,
+      });
     } catch (error) {
       next(error);
     }
@@ -70,8 +111,26 @@ export class AuthController {
 
   refreshToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await this.authService.refreshToken(req.body.refresh_token);
-      ApiResponse.success(res, result);
+      // Read refresh token from cookie (fallback to body for backward compatibility)
+      const refreshToken = getRefreshTokenFromCookie(req.cookies) || req.body.refresh_token;
+
+      if (!refreshToken) {
+        throw new Error('Refresh token is required');
+      }
+
+      const result = await this.authService.refreshToken(refreshToken);
+
+      // Set new tokens as HttpOnly cookies
+      setAuthCookies(res, {
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token,
+      });
+
+      // Return success without tokens in body
+      ApiResponse.success(res, {
+        token_type: 'cookie',
+        expires_in: result.expires_in,
+      });
     } catch (error) {
       next(error);
     }
@@ -80,8 +139,13 @@ export class AuthController {
   logout = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user!.id;
-      const refreshToken = req.body.refresh_token;
+      // Read refresh token from cookie or body
+      const refreshToken = getRefreshTokenFromCookie(req.cookies) || req.body.refresh_token;
       const result = await this.authService.logout(userId, refreshToken);
+
+      // Clear auth cookies
+      clearAuthCookies(res);
+
       ApiResponse.success(res, result);
     } catch (error) {
       next(error);

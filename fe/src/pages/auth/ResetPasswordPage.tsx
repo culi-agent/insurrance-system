@@ -5,14 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { authService } from '@/services/authService';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
+import { passwordSchema, PASSWORD_RULES } from '@/lib/validation/password-rules';
 
 const schema = z.object({
   email: z.string().email('Email không hợp lệ'),
   otp: z.string().length(6, 'Mã OTP phải có 6 ký tự'),
-  new_password: z.string().min(8, 'Mật khẩu tối thiểu 8 ký tự'),
+  new_password: passwordSchema,
   confirm_password: z.string(),
 }).refine((d) => d.new_password === d.confirm_password, {
-  message: 'Mật khẩu xác nhận không khớp',
+  message: PASSWORD_RULES.messages.confirmMismatch,
   path: ['confirm_password'],
 });
 

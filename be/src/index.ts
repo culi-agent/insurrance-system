@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { env } from './config/environment';
 import { AppDataSource } from './config/database';
 import { logger } from './shared/utils/logger';
@@ -66,7 +67,8 @@ import { securityHeaders, requestSanitizer, sqlInjectionDetector, securityAuditL
 import biAnalyticsRoutes from './modules/analytics/routes/bi-analytics.routes';
 // Swagger API Documentation
 import { setupSwagger } from './docs/swagger-setup';
-
+// CSRF Protection
+import { csrfTokenProvider, csrfProtection } from './shared/middleware/csrf';
 const app = express();
 
 // Global Middleware
@@ -78,6 +80,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(globalRateLimiter);
@@ -91,6 +94,9 @@ app.use(securityHeaders);
 app.use(requestSanitizer);
 app.use(sqlInjectionDetector);
 app.use(securityAuditLog);
+// CSRF Protection (after cookie-parser, before routes)
+app.use(csrfTokenProvider);
+app.use(csrfProtection);
 
 // API Documentation (Swagger UI at /api/docs)
 setupSwagger(app);

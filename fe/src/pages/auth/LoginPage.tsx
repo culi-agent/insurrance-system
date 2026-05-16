@@ -57,7 +57,7 @@ export default function LoginPage() {
     setError('');
     try {
       const response = await authService.login(data);
-      login(response.user, response.access_token, response.refresh_token);
+      login(response.user);
       navigate(from, { replace: true });
     } catch (err: any) {
       setError(err.response?.data?.error?.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
