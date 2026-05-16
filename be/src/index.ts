@@ -69,6 +69,7 @@ import biAnalyticsRoutes from './modules/analytics/routes/bi-analytics.routes';
 import { setupSwagger } from './docs/swagger-setup';
 // CSRF Protection
 import { csrfTokenProvider, csrfProtection } from './shared/middleware/csrf';
+
 const app = express();
 
 // Global Middleware
